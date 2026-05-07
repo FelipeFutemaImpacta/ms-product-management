@@ -6,13 +6,13 @@ import org.springframework.stereotype.Repository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Repository
 public class ProdutoRepository {
 
+    private static long sequencia = 1;
+
     private final List<Produto> produtos = new ArrayList<>();
-    private final AtomicLong sequencia = new AtomicLong(1);
 
     public List<Produto> findAll() {
         return produtos;
@@ -25,7 +25,7 @@ public class ProdutoRepository {
     }
 
     public Produto save(Produto produto) {
-        produto.setId(sequencia.getAndIncrement());
+        produto.setId(sequencia++);
         produtos.add(produto);
         return produto;
     }
