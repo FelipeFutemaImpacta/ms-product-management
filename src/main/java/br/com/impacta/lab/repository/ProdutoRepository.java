@@ -30,10 +30,24 @@ public class ProdutoRepository {
 	public ProdutoEntity criarProduto(ProdutoEntity produto) {
 		produto.setId(sequencia);
 		produtos.add(produto);
-		
+
 		sequencia = sequencia + 1;
-		
+
 		return produto;
 	}
-	
+
+	public ProdutoEntity editar(ProdutoEntity produto) {
+		for (int i = 0; i < produtos.size(); i++) {
+			if (produtos.get(i).getId().equals(produto.getId())) {
+				produtos.set(i, produto);
+				return produto;
+			}
+		}
+		return null;
+	}
+
+	public void delete(ProdutoEntity produto) {
+		produtos.remove(produto);
+	}
+
 }
