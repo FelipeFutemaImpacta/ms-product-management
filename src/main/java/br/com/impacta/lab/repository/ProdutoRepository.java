@@ -36,4 +36,18 @@ public class ProdutoRepository {
 		return produto;
 	}
 	
+	public ProdutoEntity atualizar(ProdutoEntity produto) {
+		
+		for (int i = 0; i < produtos.size(); i++) {
+			if (produto.getId() == produtos.get(i).getId()) {
+				produtos.set(i, produto);
+			}
+		}
+		return produto;
+	}
+	
+	public void deletar(ProdutoEntity produto) {
+		produtos.remove(produto);
+	}
+	
 }

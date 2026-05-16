@@ -5,10 +5,15 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import br.com.impacta.lab.dto.ProdutoPatchRequest;
 import br.com.impacta.lab.dto.ProdutoRequest;
 import br.com.impacta.lab.dto.ProdutoResponse;
+import br.com.impacta.lab.dto.ProdutoUpdateRequest;
 import br.com.impacta.lab.entity.ProdutoEntity;
+import br.com.impacta.lab.exception.NotFoundException;
 import br.com.impacta.lab.repository.ProdutoRepository;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 
 @Service
 public class ProdutoService {
@@ -32,7 +37,11 @@ public class ProdutoService {
 	public ProdutoResponse buscarPorId(Long id) {
 		ProdutoEntity produto = produtoRepository.buscarPorId(id);
 		
-		return produto == null ? null : toResponse(produto);
+		if (produto == null) {
+			throw new NotFoundException(id);
+		}
+		
+		return toResponse(produto);
 		
 	}
 	
@@ -44,6 +53,50 @@ public class ProdutoService {
 		
 		return toResponse(entity);
 		
+	}
+	
+	public ProdutoResponse atualizarProduto(Long id, ProdutoUpdateRequest request) {
+		ProdutoEntity produto = produtoRepository.buscarPorId(id);
+		
+		if (produto == null) {
+			throw new NotFoundException(id);
+		}
+		
+		produto.setNome(request.nome());
+		produto.setPreco(request.preco());
+		produto.setDescricao(request.descricao());
+		
+		return toResponse(produtoRepository.atualizar(produto));
+	}
+	
+	public ProdutoResponse atualizaParcialProduto(Long id, ProdutoPatchRequest request) {
+		ProdutoEntity produto = produtoRepository.buscarPorId(id);
+		
+		if (produto == null) {
+			throw new NotFoundException(id);
+		}
+		
+		request.nome().ifPresent(nome -> produto.setNome(nome));
+		
+		if (request.preco().isPresent()) {
+			produto.setPreco(request.preco().get());
+		}
+		
+		if (request.descricao().isPresent()) {
+			produto.setDescricao(request.descricao().get());
+		}
+		
+		return toResponse(produtoRepository.atualizar(produto));
+	}
+	
+	public void deletaProduto(Long id) {
+		ProdutoEntity produto = produtoRepository.buscarPorId(id);
+		
+		if (produto == null) {
+			throw new NotFoundException(id);
+		}
+		
+		produtoRepository.deletar(produto);
 	}
 	
 	public ProdutoEntity toEntity(ProdutoRequest request) {
