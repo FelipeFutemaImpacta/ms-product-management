@@ -1,116 +1,121 @@
 package br.com.impacta.lab.service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import br.com.impacta.lab.dto.CategoriaResponse;
 import br.com.impacta.lab.dto.ProdutoPatchRequest;
 import br.com.impacta.lab.dto.ProdutoRequest;
 import br.com.impacta.lab.dto.ProdutoResponse;
 import br.com.impacta.lab.dto.ProdutoUpdateRequest;
-import br.com.impacta.lab.entity.ProdutoEntity;
+import br.com.impacta.lab.dto.TagResponse;
+import br.com.impacta.lab.entity.Produto;
+import br.com.impacta.lab.entity.ProdutoTag;
 import br.com.impacta.lab.exception.NotFoundException;
 import br.com.impacta.lab.repository.ProdutoRepository;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Size;
 
 @Service
 public class ProdutoService {
 
-	private ProdutoRepository produtoRepository;
+	private final ProdutoRepository produtoRepository;
 
 	public ProdutoService(ProdutoRepository produtoRepository) {
 		this.produtoRepository = produtoRepository;
 	}
-	
+
 	public List<ProdutoResponse> listarTodos() {
-		
-		List<ProdutoEntity> produtos = produtoRepository.listarTodos();
-		
-		return produtos.stream()
-			.map(p -> toResponse(p))
-			.toList();
-		
+		List<Produto> produtos = produtoRepository.findAll();
+		List<ProdutoResponse> respostas = new ArrayList<>();
+		for (Produto produto : produtos) {
+			respostas.add(toResponse(produto));
+		}
+		return respostas;
 	}
-	
+
 	public ProdutoResponse buscarPorId(Long id) {
-		ProdutoEntity produto = produtoRepository.buscarPorId(id);
-		
-		if (produto == null) {
+		Optional<Produto> optional = produtoRepository.findById(id);
+		if (optional.isEmpty()) {
 			throw new NotFoundException(id);
 		}
-		
+		Produto produto = optional.get();
 		return toResponse(produto);
-		
 	}
-	
+
 	public ProdutoResponse criarProduto(ProdutoRequest request) {
-		
-		ProdutoEntity entity = toEntity(request);
-		
-		entity = produtoRepository.criarProduto(entity);
-		
-		return toResponse(entity);
-		
+		Produto produto = toModel(request);
+		produto = produtoRepository.save(produto);
+		return toResponse(produto);
 	}
-	
+
 	public ProdutoResponse atualizarProduto(Long id, ProdutoUpdateRequest request) {
-		ProdutoEntity produto = produtoRepository.buscarPorId(id);
-		
-		if (produto == null) {
+		Optional<Produto> optional = produtoRepository.findById(id);
+		if (optional.isEmpty()) {
 			throw new NotFoundException(id);
 		}
-		
+		Produto produto = optional.get();
+
 		produto.setNome(request.nome());
 		produto.setPreco(request.preco());
 		produto.setDescricao(request.descricao());
-		
-		return toResponse(produtoRepository.atualizar(produto));
+
+		return toResponse(produtoRepository.save(produto));
 	}
-	
+
 	public ProdutoResponse atualizaParcialProduto(Long id, ProdutoPatchRequest request) {
-		ProdutoEntity produto = produtoRepository.buscarPorId(id);
-		
-		if (produto == null) {
+		Optional<Produto> optional = produtoRepository.findById(id);
+		if (optional.isEmpty()) {
 			throw new NotFoundException(id);
 		}
-		
-		request.nome().ifPresent(nome -> produto.setNome(nome));
-		
+		Produto produto = optional.get();
+
+		if (request.nome().isPresent()) {
+			produto.setNome(request.nome().get());
+		}
 		if (request.preco().isPresent()) {
 			produto.setPreco(request.preco().get());
 		}
-		
 		if (request.descricao().isPresent()) {
 			produto.setDescricao(request.descricao().get());
 		}
-		
-		return toResponse(produtoRepository.atualizar(produto));
+
+		return toResponse(produtoRepository.save(produto));
 	}
-	
+
 	public void deletaProduto(Long id) {
-		ProdutoEntity produto = produtoRepository.buscarPorId(id);
-		
-		if (produto == null) {
-			throw new NotFoundException(id);
-		}
-		
-		produtoRepository.deletar(produto);
+		buscarPorId(id);
+		produtoRepository.deleteById(id);
 	}
-	
-	public ProdutoEntity toEntity(ProdutoRequest request) {
-		ProdutoEntity produto = new ProdutoEntity();
+
+	private Produto toModel(ProdutoRequest request) {
+		Produto produto = new Produto();
+		produto.setId(null);
 		produto.setNome(request.nome());
 		produto.setPreco(request.preco());
 		produto.setDescricao(request.descricao());
-		
 		return produto;
 	}
-	
-	public ProdutoResponse toResponse(ProdutoEntity entity) {
-		return new ProdutoResponse(entity.getId(), entity.getNome(), 
-				entity.getPreco(), entity.getDescricao());
+
+	private ProdutoResponse toResponse(Produto produto) {
+		CategoriaResponse categoria = null;
+		if (produto.getCategoria() != null) {
+			categoria = new CategoriaResponse(
+					produto.getCategoria().getId(),
+					produto.getCategoria().getNome());
+		}
+
+		List<TagResponse> tags = new ArrayList<>();
+		for (ProdutoTag produtoTag : produto.getProdutoTags()) {
+			tags.add(new TagResponse(
+					produtoTag.getTag().getId(),
+					produtoTag.getTag().getNome(),
+					produtoTag.getDataAssociacao()));
+		}
+
+		return new ProdutoResponse(produto.getId(), produto.getNome(),
+				produto.getPreco(), produto.getDescricao(), categoria, tags);
 	}
-	
+
 }

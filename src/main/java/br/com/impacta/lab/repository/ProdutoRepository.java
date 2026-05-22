@@ -1,53 +1,33 @@
 package br.com.impacta.lab.repository;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
-import br.com.impacta.lab.entity.ProdutoEntity;
+import br.com.impacta.lab.entity.Produto;
 
-@Repository
-public class ProdutoRepository {
+public interface ProdutoRepository extends JpaRepository<Produto, Long> {
 
-	private List<ProdutoEntity> produtos = new ArrayList<>();
-	
-	private Long sequencia = 1l; 
-	
-	public List<ProdutoEntity> listarTodos() {
-		return produtos;
-	}
-	
-	public ProdutoEntity buscarPorId(Long id) {
-		for(var produto : produtos) {
-			if (produto.getId() == id) {
-				return produto;
-			}
-		}
-		return null;
-	}
-	
-	public ProdutoEntity criarProduto(ProdutoEntity produto) {
-		produto.setId(sequencia);
-		produtos.add(produto);
-		
-		sequencia = sequencia + 1;
-		
-		return produto;
-	}
-	
-	public ProdutoEntity atualizar(ProdutoEntity produto) {
-		
-		for (int i = 0; i < produtos.size(); i++) {
-			if (produto.getId() == produtos.get(i).getId()) {
-				produtos.set(i, produto);
-			}
-		}
-		return produto;
-	}
-	
-	public void deletar(ProdutoEntity produto) {
-		produtos.remove(produto);
-	}
-	
+	@Query("""
+			SELECT DISTINCT p FROM Produto p
+			LEFT JOIN FETCH p.categoria
+			LEFT JOIN FETCH p.produtoTags pt
+			LEFT JOIN FETCH pt.tag
+			""")
+	List<Produto> findAllComRelacionamentos();
+
+	@Query("""
+			SELECT p FROM Produto p
+			LEFT JOIN FETCH p.categoria
+			LEFT JOIN FETCH p.produtoTags pt
+			LEFT JOIN FETCH pt.tag
+			WHERE p.id = :id
+			""")
+	Optional<Produto> findByIdComRelacionamentos(@Param("id") Long id);
+
+
 }
