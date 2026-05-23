@@ -21,7 +21,7 @@ public class ProdutoJaCadastradoValidation implements BusinessValdation {
 		
 		System.out.println("Dentro do ProdutoJaCadastradoValidation");
 		
-		List<ProdutoEntity> listarTodos = repository.listarTodos();
+		List<ProdutoEntity> listarTodos = repository.findAll();
 		
 		for (var produto :  listarTodos) {
 			if (request.nome().equals(produto.getNome())) {

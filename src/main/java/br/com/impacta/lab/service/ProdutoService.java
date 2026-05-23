@@ -1,19 +1,21 @@
 package br.com.impacta.lab.service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import br.com.impacta.lab.dto.CategoriaResponse;
 import br.com.impacta.lab.dto.ProdutoPatchRequest;
 import br.com.impacta.lab.dto.ProdutoRequest;
 import br.com.impacta.lab.dto.ProdutoResponse;
 import br.com.impacta.lab.dto.ProdutoUpdateRequest;
+import br.com.impacta.lab.dto.TagResponse;
+import br.com.impacta.lab.entity.CategoriaEntity;
 import br.com.impacta.lab.entity.ProdutoEntity;
 import br.com.impacta.lab.exception.NotFoundException;
 import br.com.impacta.lab.repository.ProdutoRepository;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Size;
 
 @Service
 public class ProdutoService {
@@ -26,7 +28,9 @@ public class ProdutoService {
 	
 	public List<ProdutoResponse> listarTodos() {
 		
-		List<ProdutoEntity> produtos = produtoRepository.listarTodos();
+		//List<ProdutoEntity> produtos = produtoRepository.findAll();
+		
+		List<ProdutoEntity> produtos = produtoRepository.buscaPorDescricao("%RAM%");
 		
 		return produtos.stream()
 			.map(p -> toResponse(p))
@@ -35,13 +39,14 @@ public class ProdutoService {
 	}
 	
 	public ProdutoResponse buscarPorId(Long id) {
-		ProdutoEntity produto = produtoRepository.buscarPorId(id);
+		//Optional<ProdutoEntity> produto = produtoRepository.findById(id);
+		Optional<ProdutoEntity> produto = produtoRepository.findByIdFull(id);
 		
-		if (produto == null) {
+		if (!produto.isPresent()) {
 			throw new NotFoundException(id);
 		}
 		
-		return toResponse(produto);
+		return toResponse(produto.get());
 		
 	}
 	
@@ -49,32 +54,36 @@ public class ProdutoService {
 		
 		ProdutoEntity entity = toEntity(request);
 		
-		entity = produtoRepository.criarProduto(entity);
+		entity = produtoRepository.save(entity);
 		
 		return toResponse(entity);
 		
 	}
 	
 	public ProdutoResponse atualizarProduto(Long id, ProdutoUpdateRequest request) {
-		ProdutoEntity produto = produtoRepository.buscarPorId(id);
+		Optional<ProdutoEntity> produtoOpt = produtoRepository.findById(id);
 		
-		if (produto == null) {
+		if (!produtoOpt.isPresent()) {
 			throw new NotFoundException(id);
 		}
+		
+		var produto = produtoOpt.get();
 		
 		produto.setNome(request.nome());
 		produto.setPreco(request.preco());
 		produto.setDescricao(request.descricao());
 		
-		return toResponse(produtoRepository.atualizar(produto));
+		return toResponse(produtoRepository.save(produto));
 	}
 	
 	public ProdutoResponse atualizaParcialProduto(Long id, ProdutoPatchRequest request) {
-		ProdutoEntity produto = produtoRepository.buscarPorId(id);
+		Optional<ProdutoEntity> produtoOpt = produtoRepository.findById(id);
 		
-		if (produto == null) {
+		if (!produtoOpt.isPresent()) {
 			throw new NotFoundException(id);
 		}
+		
+		var produto = produtoOpt.get();
 		
 		request.nome().ifPresent(nome -> produto.setNome(nome));
 		
@@ -86,17 +95,20 @@ public class ProdutoService {
 			produto.setDescricao(request.descricao().get());
 		}
 		
-		return toResponse(produtoRepository.atualizar(produto));
+		return toResponse(produtoRepository.save(produto));
 	}
 	
 	public void deletaProduto(Long id) {
-		ProdutoEntity produto = produtoRepository.buscarPorId(id);
+		Optional<ProdutoEntity> produtoOpt = produtoRepository.findById(id);
 		
-		if (produto == null) {
+		if (!produtoOpt.isPresent()) {
 			throw new NotFoundException(id);
 		}
 		
-		produtoRepository.deletar(produto);
+		var produto = produtoOpt.get();
+		
+		produtoRepository.delete(produto);
+		//produtoRepository.deleteById(id);
 	}
 	
 	public ProdutoEntity toEntity(ProdutoRequest request) {
@@ -109,8 +121,22 @@ public class ProdutoService {
 	}
 	
 	public ProdutoResponse toResponse(ProdutoEntity entity) {
+		CategoriaEntity categoria = entity.getCategoria();
+		CategoriaResponse categoriaResponse = new CategoriaResponse(categoria.getId(), categoria.getNome());
+		
+		List<TagResponse> tags = new ArrayList<>();
+		
+		for (var produtoTag : entity.getProdutoTags()) {
+			TagResponse tagResponse = new TagResponse(produtoTag.getTag().getId(), 
+					produtoTag.getTag().getNome(), 
+					produtoTag.getData());
+			
+			tags.add(tagResponse);
+		}
+		
+		
 		return new ProdutoResponse(entity.getId(), entity.getNome(), 
-				entity.getPreco(), entity.getDescricao());
+				entity.getPreco(), entity.getDescricao(), categoriaResponse, tags);
 	}
 	
 }
